@@ -31,9 +31,9 @@ client = TelegramClient(
     API_HASH,
     auto_reconnect=True,
     connection_retries=999999,
-    retry_delay=5,
+    retry_delay=3,
     request_retries=10,
-    sequential_updates=True
+    sequential_updates=False
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -64,7 +64,7 @@ def load_blacklist():
     )
     return set(x[0] for x in cursor.fetchall())
 
-blacklist = set()
+blacklist = load_blacklist()
 auto_reply_groups = set()
 
 def add_blacklist(chat_id):
@@ -241,10 +241,12 @@ async def menu(e):
 ├──────────────
 ➠ .repwok
 ➠ .repoff
-➠ .spm
-➠ .spmoff
+
+├──────────────
 ➠ .blck
 ➠ .unblck
+
+├──────────────
 ➠ .q
 
 ╰────────────────
@@ -733,7 +735,7 @@ async def gcast(e):
                 ok += 1
 
                 await asyncio.sleep(
-                    random.uniform(6, 12)
+                    random.uniform(1, 5)
                 )
 
             except FloodWaitError as ex:
@@ -864,7 +866,7 @@ async def auto_reply_handler(e):
     me = await client.get_me()
     if e.sender_id == me.id:
         return
-    await asyncio.sleep(random.randint(2,5))
+    await asyncio.sleep(random.randint(5,9))
     await e.reply(random.choice(AUTO_REPLY_TEXTS))
 
 
@@ -908,71 +910,6 @@ async def unblck(e):
 
     await e.reply(
         box("✅ UNBLOCK", f"➠ unblocked : {reply.sender_id}"),
-        parse_mode='html'
-    )
-
-
-active_spm = {}
-
-@client.on(events.NewMessage(
-    pattern=r'^\.spm (.+)\s+\((\d+)\)$',
-    outgoing=True
-))
-async def spm_start(e):
-
-    text = e.pattern_match.group(1).strip()
-    interval = int(e.pattern_match.group(2))
-
-    chat_id = e.chat_id
-
-    if chat_id in active_spm:
-        active_spm[chat_id].cancel()
-
-    async def spm_loop():
-        while True:
-            await asyncio.sleep(interval)
-            await client.send_message(chat_id, text)
-
-    task = asyncio.create_task(spm_loop())
-    active_spm[chat_id] = task
-
-    await e.reply(
-        box(
-            "📨 AUTO TEXT",
-            f"""➠ status : enabled
-➠ interval : {interval} detik
-➠ text : {text}"""
-        ),
-        parse_mode='html'
-    )
-
-@client.on(events.NewMessage(
-    pattern=r'^\.spmoff$',
-    outgoing=True
-))
-async def spm_stop(e):
-
-    chat_id = e.chat_id
-
-    if chat_id not in active_spm:
-
-        await e.reply(
-            box(
-                "📨 AUTO TEXT",
-                "➠ tidak ada task aktif"
-            ),
-            parse_mode='html'
-        )
-        return
-
-    active_spm[chat_id].cancel()
-    del active_spm[chat_id]
-
-    await e.reply(
-        box(
-            "📨 AUTO TEXT",
-            "➠ status : disabled"
-        ),
         parse_mode='html'
     )
 
